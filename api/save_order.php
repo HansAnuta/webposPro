@@ -13,6 +13,13 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
+// Block Manager (store_admin) from processing transactions
+if ($_SESSION['role'] === 'store_admin') {
+    http_response_code(403);
+    echo json_encode(["message" => "Managers are not allowed to process transactions."]);
+    exit;
+}
+
 $data = json_decode(file_get_contents("php://input"));
 
 if (!isset($data->items) || count($data->items) === 0) {

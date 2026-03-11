@@ -49,6 +49,24 @@
 </div>
 
 <script>
+// Define the notification function for the login page
+function showNotification(message, type = 'success') {
+    const container = document.getElementById('notification-container');
+    const notif = document.createElement('div');
+    notif.className = `notification ${type}`;
+    const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+    notif.innerHTML = `<i class="fas ${icon}"></i><span>${message}</span>`;
+    
+    container.appendChild(notif);
+    
+    setTimeout(() => {
+        notif.classList.add('hiding'); 
+        notif.addEventListener('animationend', () => {
+            notif.remove();
+        });
+    }, 3000);
+}
+
 document.getElementById('login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const username = document.getElementById('username').value;
@@ -79,13 +97,15 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
                 window.location.href = 'index.php'; // Admins and Cashiers go to POS
             }
         } else {
-            alert(data.message || "Login failed");
+            // Use the custom notification bubble instead of alert()
+            showNotification("Invalid account", "error");
             btn.innerHTML = originalText;
             btn.disabled = false;
         }
     } catch (error) {
         console.error('Error:', error);
-        alert("Connection error. Please try again.");
+        // Use the custom notification bubble for connection errors too
+        showNotification("Connection error. Please try again.", "error");
         btn.innerHTML = originalText;
         btn.disabled = false;
     }

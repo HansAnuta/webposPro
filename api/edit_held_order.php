@@ -6,6 +6,13 @@ include_once 'db_connect.php';
 
 if (!isset($_SESSION['user_id'])) { http_response_code(401); exit; }
 
+// Block Manager (store_admin) from processing transactions
+if ($_SESSION['role'] === 'store_admin') {
+    http_response_code(403);
+    echo json_encode(["message" => "Managers are not allowed to process transactions."]);
+    exit;
+}
+
 $data = json_decode(file_get_contents("php://input"));
 $user_id = $_SESSION['user_id'];
 

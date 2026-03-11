@@ -241,7 +241,8 @@ function updateUserDisplay(user) {
     if(nameEl && user) nameEl.innerText = user.first_name + ' ' + user.last_name;
     
     let displayRole = user.role;
-    if (displayRole === 'store_admin') displayRole = 'admin';
+    // CHANGE 1: Rename the display tag to MANAGER
+    if (displayRole === 'store_admin') displayRole = 'manager'; 
     if(roleEl && user) roleEl.innerText = displayRole.toUpperCase();
 
     // --- NEW: Populate Mobile Profile Avatar & Modal ---
@@ -252,6 +253,19 @@ function updateUserDisplay(user) {
         if(document.getElementById('modal-user-initial')) document.getElementById('modal-user-initial').innerText = initial;
         if(document.getElementById('modal-user-name')) document.getElementById('modal-user-name').innerText = user.first_name + ' ' + user.last_name;
         if(document.getElementById('modal-user-role')) document.getElementById('modal-user-role').innerText = displayRole.toUpperCase();
+    }
+
+    // CHANGE 2: Add restrictions for the store_admin (Manager)
+    if (user && user.role === 'store_admin') {
+        document.body.classList.add('role-admin'); // Tag the body for CSS hiding
+        
+        const checkoutBtn = document.getElementById('checkout-btn-el');
+        if (checkoutBtn) {
+            checkoutBtn.disabled = true;
+            checkoutBtn.style.background = '#9ca3af'; // Gray out the button
+            checkoutBtn.innerText = 'Disabled for Manager';
+            checkoutBtn.onclick = null; // Remove the click function entirely
+        }
     }
 
     if (user && user.role === 'cashier') {
@@ -1476,14 +1490,15 @@ function toggleOrderDetails(row, sale) {
                         <p style="font-size:0.8rem; color:#666; text-align:right;">Ref: ${sale.reference_number || 'N/A'}</p>
                         <div style="display:flex; gap:10px; margin-top: 10px; justify-content:flex-end;">
                             ${sale.status === 'completed' 
-                                ? `<button class="btn-primary" style="background:#f59e0b;" onclick="requirePassword(() => updateOrderStatus(${sale.order_id}, 'hold'))"><i class="fas fa-pause"></i> Put on Hold</button>`
-                                : `<button class="btn-primary" style="background:#10b981;" onclick="requirePassword(() => updateOrderStatus(${sale.order_id}, 'completed'))"><i class="fas fa-check"></i> Fulfill Order</button>
-                                <button class="btn-primary" style="background:#3b82f6;" onclick="requirePassword(() => openEditHoldModal(${sale.order_id}))"><i class="fas fa-pen"></i> Edit Hold</button>`
+                                ? `<button class="btn-primary manager-restricted" style="background:#f59e0b;" onclick="requirePassword(() => updateOrderStatus(${sale.order_id}, 'hold'))"><i class="fas fa-pause"></i> Put on Hold</button>`
+                                : `<button class="btn-primary manager-restricted" style="background:#10b981;" onclick="requirePassword(() => updateOrderStatus(${sale.order_id}, 'completed'))"><i class="fas fa-check"></i> Fulfill Order</button>
+                                <button class="btn-primary manager-restricted" style="background:#3b82f6;" onclick="requirePassword(() => openEditHoldModal(${sale.order_id}))"><i class="fas fa-pen"></i> Edit Hold</button>`
                             }
                             <button class="btn-primary" style="background:#e5e7eb; color:var(--text);" onclick="showReceipt(${sale.order_id}, ${JSON.stringify(sale).replace(/"/g, '&quot;')}); openModal('receipt-modal');">
                                 <i class="fas fa-print"></i> Reprint
                             </button>
                         </div>
+                        
                     </div>
                 </div>
             </div>
@@ -1526,16 +1541,22 @@ function proceedToEdit(orderId) {
     editingOrderData = sale;
     
     // Inject items into the main cart
-    cart = sale.items.map(i => ({
-        uniqueId: i.variant_id ? `${i.product_id}-${i.variant_id}` : `${i.product_id}`,
-        product_id: i.product_id,
-        variant_id: i.variant_id,
-        variant_name: i.variant,
-        name: i.name,
-        price: parseFloat(i.price),
-        image: '', 
-        qty: parseInt(i.qty)
-    }));
+    cart = sale.items.map(i => {
+        // Look up the product in the active inventory to see if it still exists
+        const matchedProduct = products.find(p => p.product_id == i.product_id);
+        const imageUrl = matchedProduct ? matchedProduct.image : '';
+
+        return {
+            uniqueId: i.variant_id ? `${i.product_id}-${i.variant_id}` : `${i.product_id}`,
+            product_id: i.product_id,
+            variant_id: i.variant_id,
+            variant_name: i.variant,
+            name: i.name,
+            price: parseFloat(i.price),
+            image: imageUrl, // Dynamically pulls the image if it still exists in the database
+            qty: parseInt(i.qty)
+        };
+    });
 
     appliedDiscountObj = null; currentDiscountType = null;
     document.querySelectorAll('.disc-btn').forEach(b => b.classList.remove('active-disc'));
